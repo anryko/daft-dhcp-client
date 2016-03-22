@@ -483,11 +483,11 @@ main(int argc, char* argv[])
 
         int sd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
         check(sd != -1, "socket() failed");
-        if (dhcp_action == DHCP_OPTION_RELEASE)
-                goto done;
 
         rc = packet_send(dev, sd, &pkt_local);
         check(rc != -1, "packet_send() failed");
+        if (dhcp_action == DHCP_OPTION_RELEASE)
+                goto done;
 
         rc = packet_recv(sd, &pkt_remote);
         check(rc != -1, "packet_recv() failed");

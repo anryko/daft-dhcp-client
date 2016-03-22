@@ -9,7 +9,7 @@ Study linux networking programming.
 #### Installation
 ```bash
 git clone --depth=1 https://github.com/anryko/daft-dhcp-client.git
-cd daft-dhcl-client
+cd daft-dhcp-client
 make
 ```
 

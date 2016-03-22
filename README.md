@@ -8,14 +8,14 @@ Study linux networking programming.
 
 #### Installation
 ```bash
-git clone --depth=1 https://github.com/anryko/daft-dhcp-clent.git
+git clone --depth=1 https://github.com/anryko/daft-dhcp-client.git
 cd daft-dhcl-clent
 make
 ```
 
 #### Usage
 ```bash
-./daft-dhcp-client -h
+$ ./daft-dhcp-client -h
 Usage: ./daft-dhcp-client -i <interface> [-d] [-r <ip>] [-q <ip>] [-h]
 
         -h --help                       This help message

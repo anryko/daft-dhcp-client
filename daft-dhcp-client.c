@@ -468,6 +468,9 @@ main(int argc, char* argv[])
                 exit(EXIT_FAILURE);
         }
 
+        int sd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+        check(sd != -1, "socket() failed");
+
         uint8_t mac[ETHER_ADDR_LEN];
         ssize_t rc;
         rc = get_mac_address(dev, mac);
@@ -481,9 +484,6 @@ main(int argc, char* argv[])
         packet_init(&pkt_remote);
         pkt_remote.len = ETH_FRAME_LEN;
 
-        int sd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-        check(sd != -1, "socket() failed");
-
         rc = packet_send(dev, sd, &pkt_local);
         check(rc != -1, "packet_send() failed");
         if (dhcp_action == DHCP_OPTION_RELEASE)
@@ -496,7 +496,8 @@ main(int argc, char* argv[])
 
 done:
         close(sd);
-        return 0;
+        return EXIT_SUCCESS;
 error:
-        return (int)rc;
+        if (sd) close(sd);
+        return EXIT_FAILURE;
 }

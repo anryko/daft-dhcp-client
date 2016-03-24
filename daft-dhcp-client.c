@@ -380,7 +380,7 @@ dhcp_options_setup(struct dhcphdr* dhcp, uint8_t req_type, in_addr_t req_ip)
                                  MESSAGE_TYPE_DOMAIN_NAME };
 
         len += dhcp_option_set(&dhcp->options[len], MESSAGE_TYPE_PARAMETER_REQ_LIST,
-                               (uint8_t*)&req_params, sizeof(req_params));
+                               req_params, sizeof(req_params));
 
         option = 0;
         len += dhcp_option_set(&dhcp->options[len], MESSAGE_TYPE_END, &option,
@@ -421,7 +421,7 @@ int
 main(int argc, char* argv[])
 {
         char* dev = NULL;
-        u_int8_t dhcp_action = DHCP_OPTION_DISCOVER;
+        uint8_t dhcp_action = DHCP_OPTION_DISCOVER;
         struct in_addr ip;
         memset(&ip, 0, sizeof(ip));
         int opt;

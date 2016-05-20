@@ -1,7 +1,7 @@
 TARGET=daft-dhcp-client
-CFLAGS="-D_BSD_SOURCE"
+CFLAGS += -D_DEFAULT_SOURCE -D_BSD_SOURCE
 
 all: $(TARGET)
 
 clean:
-	rm daft-dhcp-client
+	rm -f daft-dhcp-client

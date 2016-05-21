@@ -57,12 +57,15 @@
 #define DHCP_OPTION_ROUTER 3
 #define DHCP_OPTION_DNS 6
 #define DHCP_OPTION_DOMAIN_NAME 15
+#define DHCP_OPTION_BROADCAST_ADDRESS 28
 #define DHCP_OPTION_REQ_IP 50
 #define DHCP_OPTION_LEASE_TIME 51
 #define DHCP_OPTION_DHCP 53
 #define DHCP_OPTION_SERVER_ID 54
 #define DHCP_OPTION_PARAMETER_REQ_LIST 55
 #define DHCP_OPTION_MSG 56
+#define DHCP_OPTION_RENEWAL_TIME 58
+#define DHCP_OPTION_REBINDING_TIME 59
 #define DHCP_OPTION_END 255
 
 #define DHCP_OPTIONS_MAX_LEN 256
@@ -360,6 +363,13 @@ dhcp_print(struct dhcphdr* dhcp)
                 } else if (code == DHCP_OPTION_DNS
                            && op_len >= 4 && op_len % 4 == 0) {
                         addr_print("Domain-Name-Servers", cur_pos, op_len / 4);
+                } else if (code == DHCP_OPTION_DOMAIN_NAME
+                           && op_len > 0) {
+                        printf("Domain-Name %.*s\n",
+                               (int)op_len, cur_pos);
+                } else if (code == DHCP_OPTION_BROADCAST_ADDRESS
+                           && op_len == 4) {
+                         addr_print("Broadcast-Address", cur_pos, 1);
                 } else if (code == DHCP_OPTION_SERVER_ID
                            && op_len == 4) {
                         addr_print("Server-ID", cur_pos, 1);
@@ -371,6 +381,14 @@ dhcp_print(struct dhcphdr* dhcp)
                            && op_len > 0) {
                         printf("Server-Message \"%.*s\"\n",
                                (int)op_len, cur_pos);
+                } else if (code == DHCP_OPTION_RENEWAL_TIME
+                           && op_len == 4) {
+                         printf("Renewal-Time %d\n",
+                               htonl(*(uint32_t*)cur_pos));
+                } else if (code == DHCP_OPTION_REBINDING_TIME
+                           && op_len == 4) {
+                         printf("Rebinding-Time %d\n",
+                               htonl(*(uint32_t*)cur_pos));
                 } else {
                         log_debug("Undefined-code %d\n", code);
                 }
@@ -508,12 +526,7 @@ main(int argc, char* argv[])
         } else {
                 // dirty
                 int optmac_ok = sscanf(optmac, "%2x:%2x:%2x:%2x:%2x:%2x", mac, mac+1, mac+2, mac+3, mac+4, mac+5);
-                // check(optmac_ok != 6, "bad MAC address provided"); // does not work? missing something, time to sleep
-                // FIXME: better eror-handling
-                if ( optmac_ok != 6 ){
-                        printf("bad MAC address provided\n");
-                        exit(EXIT_FAILURE);
-                }
+                check(optmac_ok == 6, "bad MAC address provided");
         }
 
         int sd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));

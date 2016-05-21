@@ -424,12 +424,12 @@ help_print(char* exec_name)
 {
         usage_print(exec_name);
         printf("\n\t-h --help\t\t\tThis help message\n"
-               "\t-v --vervose\t\t\tPrint debugging info to stderr\n"
+               "\t-v --verbose\t\t\tPrint debugging info to stderr\n"
                "\t-i --interface <interface>\tInterface name\n"
                "\t-d --discover\t\t\tDiscover DHCP Server\n"
                "\t-r --request <ip>\t\tRequest IP lease\n"
                "\t-q --release <ip>\t\tRelease IP lease\n"
-               "\t-m --mac <MAC>\t\tMAC address\n"
+               "\t-m --mac <MAC>\t\t\tMAC address\n"
                "\t-t --timeout <sec>\t\tTimeout (default 5 sec.)\n\n");
 }
 

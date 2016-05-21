@@ -40,27 +40,30 @@
 
 #define DHCP_HARDWARE_TYPE_10_EHTHERNET 1
 
-#define MESSAGE_TYPE_PAD 0
-#define MESSAGE_TYPE_REQ_SUBNET_MASK 1
-#define MESSAGE_TYPE_ROUTER 3
-#define MESSAGE_TYPE_DNS 6
-#define MESSAGE_TYPE_DOMAIN_NAME 15
-#define MESSAGE_TYPE_REQ_IP 50
-#define MESSAGE_TYPE_LEASE_TIME 51
-#define MESSAGE_TYPE_DHCP 53
-#define MESSAGE_TYPE_SERVER_ID 54
-#define MESSAGE_TYPE_PARAMETER_REQ_LIST 55
-#define MESSAGE_TYPE_MSG 56
-#define MESSAGE_TYPE_END 255
 
-#define DHCP_OPTION_DISCOVER 1
-#define DHCP_OPTION_OFFER 2
-#define DHCP_OPTION_REQUEST 3
-#define DHCP_OPTION_DECLINE 4
-#define DHCP_OPTION_PACK 5
-#define DHCP_OPTION_PNACK 6
-#define DHCP_OPTION_RELEASE 7
-#define DHCP_OPTION_INFORM 8
+// http://www.iana.org/assignments/bootp-dhcp-parameters/
+// DHCP Message Types
+#define DHCP_MESSAGE_TYPE_DISCOVER 1
+#define DHCP_MESSAGE_TYPE_OFFER 2
+#define DHCP_MESSAGE_TYPE_REQUEST 3
+#define DHCP_MESSAGE_TYPE_DECLINE 4
+#define DHCP_MESSAGE_TYPE_PACK 5
+#define DHCP_MESSAGE_TYPE_PNACK 6
+#define DHCP_MESSAGE_TYPE_RELEASE 7
+#define DHCP_MESSAGE_TYPE_INFORM 8
+// DHCP Options
+#define DHCP_OPTION_PAD 0
+#define DHCP_OPTION_REQ_SUBNET_MASK 1
+#define DHCP_OPTION_ROUTER 3
+#define DHCP_OPTION_DNS 6
+#define DHCP_OPTION_DOMAIN_NAME 15
+#define DHCP_OPTION_REQ_IP 50
+#define DHCP_OPTION_LEASE_TIME 51
+#define DHCP_OPTION_DHCP 53
+#define DHCP_OPTION_SERVER_ID 54
+#define DHCP_OPTION_PARAMETER_REQ_LIST 55
+#define DHCP_OPTION_MSG 56
+#define DHCP_OPTION_END 255
 
 #define DHCP_OPTIONS_MAX_LEN 256
 
@@ -162,7 +165,7 @@ packet_verify(struct packet* pkt)
         if ((htons(pkt->ethernet_header->ether_type) == ETHERTYPE_IP)
              && (pkt->ip_header->ip_p == IPPROTO_UDP)
              && (ntohs(pkt->udp_header->uh_sport) == DHCP_SERVER_PORT)
-             && (pkt->dhcp_header->opcode == DHCP_OPTION_OFFER)) {
+             && (pkt->dhcp_header->opcode == DHCP_MESSAGE_TYPE_OFFER)) {
                 size_t cksum_orig = pkt->ip_header->ip_sum;
                 pkt->ip_header->ip_sum = 0;
                 size_t cksum_calc = in_cksum((unsigned short*)pkt->ip_header,
@@ -305,13 +308,13 @@ dhcp_type_print(uint8_t* msg_type_code)
 {
         printf("Message-Type");
         switch (*msg_type_code) {
-        case DHCP_OPTION_OFFER:
+        case DHCP_MESSAGE_TYPE_OFFER:
                 printf(" OFFER");
                 break;
-        case DHCP_OPTION_PACK:
+        case DHCP_MESSAGE_TYPE_PACK:
                 printf(" ACK");
                 break;
-        case DHCP_OPTION_PNACK:
+        case DHCP_MESSAGE_TYPE_PNACK:
                 printf(" NACK");
                 break;
         default:
@@ -341,30 +344,30 @@ dhcp_print(struct dhcphdr* dhcp)
         while (len <= DHCP_OPTIONS_MAX_LEN) {
                 code = *cur_pos++; len++;
                 op_len = *cur_pos++; len++;
-                if (code == MESSAGE_TYPE_PAD) {
+                if (code == DHCP_OPTION_PAD) {
                         continue;
-                } else if (code == MESSAGE_TYPE_END) {
+                } else if (code == DHCP_OPTION_END) {
                         break;
-                } else if (code == MESSAGE_TYPE_DHCP
+                } else if (code == DHCP_OPTION_DHCP
                            && op_len == 1) {
                         dhcp_type_print(cur_pos);
-                } else if (code == MESSAGE_TYPE_REQ_SUBNET_MASK
+                } else if (code == DHCP_OPTION_REQ_SUBNET_MASK
                            && op_len == 4) {
                         addr_print("Subnet-Mask", cur_pos, 1);
-                } else if (code == MESSAGE_TYPE_ROUTER
+                } else if (code == DHCP_OPTION_ROUTER
                            && op_len >= 4 && op_len % 4 == 0) {
                         addr_print("Default-Gateways", cur_pos, op_len / 4);
-                } else if (code == MESSAGE_TYPE_DNS
+                } else if (code == DHCP_OPTION_DNS
                            && op_len >= 4 && op_len % 4 == 0) {
                         addr_print("Domain-Name-Servers", cur_pos, op_len / 4);
-                } else if (code == MESSAGE_TYPE_SERVER_ID
+                } else if (code == DHCP_OPTION_SERVER_ID
                            && op_len == 4) {
                         addr_print("Server-ID", cur_pos, 1);
-                } else if (code == MESSAGE_TYPE_LEASE_TIME
+                } else if (code == DHCP_OPTION_LEASE_TIME
                            && op_len == 4) {
                         printf("Lease-Time %d\n",
                                htonl(*(uint32_t*)cur_pos));
-                } else if (code == MESSAGE_TYPE_MSG
+                } else if (code == DHCP_OPTION_MSG
                            && op_len > 0) {
                         printf("Server-Message \"%.*s\"\n",
                                (int)op_len, cur_pos);
@@ -381,22 +384,22 @@ dhcp_options_setup(struct dhcphdr* dhcp, uint8_t req_type, in_addr_t req_ip)
 {
         size_t len = 0;
         uint8_t option = req_type;
-        len += dhcp_option_set(&dhcp->options[len], MESSAGE_TYPE_DHCP, &option,
+        len += dhcp_option_set(&dhcp->options[len], DHCP_OPTION_DHCP, &option,
                                sizeof(option));
 
-        len += dhcp_option_set(&dhcp->options[len], MESSAGE_TYPE_REQ_IP,
+        len += dhcp_option_set(&dhcp->options[len], DHCP_OPTION_REQ_IP,
                                (uint8_t*)&req_ip, sizeof(req_ip));
 
-        uint8_t req_params[] = { MESSAGE_TYPE_REQ_SUBNET_MASK,
-                                 MESSAGE_TYPE_ROUTER,
-                                 MESSAGE_TYPE_DNS,
-                                 MESSAGE_TYPE_DOMAIN_NAME };
+        uint8_t req_params[] = { DHCP_OPTION_REQ_SUBNET_MASK,
+                                 DHCP_OPTION_ROUTER,
+                                 DHCP_OPTION_DNS,
+                                 DHCP_OPTION_DOMAIN_NAME };
 
-        len += dhcp_option_set(&dhcp->options[len], MESSAGE_TYPE_PARAMETER_REQ_LIST,
+        len += dhcp_option_set(&dhcp->options[len], DHCP_OPTION_PARAMETER_REQ_LIST,
                                req_params, sizeof(req_params));
 
         option = 0;
-        len += dhcp_option_set(&dhcp->options[len], MESSAGE_TYPE_END, &option,
+        len += dhcp_option_set(&dhcp->options[len], DHCP_OPTION_END, &option,
                                sizeof(option));
 
         return len;
@@ -438,7 +441,7 @@ main(int argc, char* argv[])
 {
         char* dev = NULL;
         char* optmac = NULL;
-        uint8_t dhcp_action = DHCP_OPTION_DISCOVER;
+        uint8_t dhcp_action = DHCP_MESSAGE_TYPE_DISCOVER;
         struct in_addr ip;
         memset(&ip, 0, sizeof(ip));
         int opt;
@@ -469,15 +472,15 @@ main(int argc, char* argv[])
                         dev = optarg;
                         break;
                 case 'd':
-                        dhcp_action = DHCP_OPTION_DISCOVER;
+                        dhcp_action = DHCP_MESSAGE_TYPE_DISCOVER;
                         ip.s_addr = 0;
                         break;
                 case 'r':
-                        dhcp_action = DHCP_OPTION_REQUEST;
+                        dhcp_action = DHCP_MESSAGE_TYPE_REQUEST;
                         inet_aton(optarg, &ip);
                         break;
                 case 'q':
-                        dhcp_action = DHCP_OPTION_RELEASE;
+                        dhcp_action = DHCP_MESSAGE_TYPE_RELEASE;
                         inet_aton(optarg, &ip);
                         break;
                 case 'm':
@@ -526,7 +529,7 @@ main(int argc, char* argv[])
 
         rc = packet_send(dev, sd, &pkt_local);
         check(rc != -1, "packet_send() failed");
-        if (dhcp_action == DHCP_OPTION_RELEASE)
+        if (dhcp_action == DHCP_MESSAGE_TYPE_RELEASE)
                 goto done;
 
         rc = packet_recv(sd, &pkt_remote, timeout);

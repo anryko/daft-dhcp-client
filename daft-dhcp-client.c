@@ -526,12 +526,7 @@ main(int argc, char* argv[])
         } else {
                 // dirty
                 int optmac_ok = sscanf(optmac, "%2x:%2x:%2x:%2x:%2x:%2x", mac, mac+1, mac+2, mac+3, mac+4, mac+5);
-                // check(optmac_ok != 6, "bad MAC address provided"); // does not work? missing something, time to sleep
-                // FIXME: better eror-handling
-                if ( optmac_ok != 6 ){
-                        printf("bad MAC address provided\n");
-                        exit(EXIT_FAILURE);
-                }
+                check(optmac_ok == 6, "bad MAC address provided");
         }
 
         int sd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));

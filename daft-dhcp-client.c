@@ -25,6 +25,10 @@
                 errno = 0;                                                     \
                 goto error;                                                    \
         }
+#define log_debug(format, ...) do {                     \
+        if (verbose)                                    \
+                fprintf(stderr, format, ##__VA_ARGS__); \
+        } while(0)
 
 #define DHCP_CHADDR_LEN 16
 #define DHCP_SNAME_LEN 64
@@ -64,6 +68,8 @@
 #define DHCP_CLIENT_PORT 68
 
 #define DHCP_MAGIC_COOKIE 0x63825363
+
+static int verbose = 0;
 
 struct dhcphdr {
         uint8_t opcode;
@@ -195,7 +201,7 @@ error:
 }
 
 static ssize_t
-packet_recv(const int sock, struct packet* pkt)
+packet_recv(const int sock, struct packet* pkt, const int timeout)
 {
         struct sockaddr_storage src_addr;
         memset(&src_addr, 0, sizeof(src_addr));
@@ -209,7 +215,7 @@ packet_recv(const int sock, struct packet* pkt)
                 check(rc != -1, "recvfrom() failed");
                 if (rc == (ssize_t)pkt->len)
                         continue;
-                if (time(0) > timer_start + DHCP_TIMEOUT) {
+                if (time(0) > timer_start + timeout) {
                         printf("Timeout.\n");
                         exit(EXIT_FAILURE);
                 }
@@ -317,6 +323,11 @@ dhcp_type_print(uint8_t* msg_type_code)
 static void
 dhcp_print(struct dhcphdr* dhcp)
 {
+        // dirty, should use ether_ntoa instead
+        printf ("Your-MAC %01x:%01x:%01x:%01x:%01x:%01x\n",
+                dhcp->chaddr[0], dhcp->chaddr[1], dhcp->chaddr[2],
+                dhcp->chaddr[3], dhcp->chaddr[4], dhcp->chaddr[5]);
+
         struct in_addr ip;
         ip.s_addr = dhcp->yiaddr;
         if (ip.s_addr != 0) {
@@ -357,6 +368,8 @@ dhcp_print(struct dhcphdr* dhcp)
                            && op_len > 0) {
                         printf("Server-Message \"%.*s\"\n",
                                (int)op_len, cur_pos);
+                } else {
+                        log_debug("Undefined-code %d\n", code);
                 }
                 cur_pos += op_len;
                 len += op_len;
@@ -403,7 +416,7 @@ packet_setup(struct packet* pkt, uint8_t* mac, uint8_t req_type,
 inline static void
 usage_print(char* exec_name)
 {
-        printf("Usage: %s -i <interface> [-d] [-r <ip>] [-q <ip>] [-h]\n", exec_name);
+        printf("Usage: %s -i <interface> [-h] [-v] [-d] [-r <ip>] [-q <ip>] [-m <MAC>] [-t <sec>]\n", exec_name);
 }
 
 inline static void
@@ -411,37 +424,47 @@ help_print(char* exec_name)
 {
         usage_print(exec_name);
         printf("\n\t-h --help\t\t\tThis help message\n"
+               "\t-v --vervose\t\t\tPrint debugging info to stderr\n"
                "\t-i --interface <interface>\tInterface name\n"
                "\t-d --discover\t\t\tDiscover DHCP Server\n"
                "\t-r --request <ip>\t\tRequest IP lease\n"
-               "\t-q --release <ip>\t\tRelease IP lease\n\n");
+               "\t-q --release <ip>\t\tRelease IP lease\n"
+               "\t-m --mac <MAC>\t\tMAC address\n"
+               "\t-t --timeout <sec>\t\tTimeout (default 5 sec.)\n\n");
 }
 
 int
 main(int argc, char* argv[])
 {
         char* dev = NULL;
+        char* optmac = NULL;
         uint8_t dhcp_action = DHCP_OPTION_DISCOVER;
         struct in_addr ip;
         memset(&ip, 0, sizeof(ip));
         int opt;
+        int timeout = DHCP_TIMEOUT;
 
         static struct option long_options[] = {
                 { "help", no_argument, 0, 'h' },
+                { "verbose", no_argument, 0, 'v' },
                 { "interface", required_argument, 0, 'i' },
                 { "discover", no_argument, 0, 'd' },
                 { "request", required_argument, 0, 'r' },
                 { "release", required_argument, 0,'q' },
+                { "mac", required_argument, 0,'m' },
+                { "timeout", required_argument, 0,'t' },
                 { 0, 0, 0, 0 }
         };
 
         int long_index = 0;
-        while ((opt = getopt_long(argc, argv, "hi:dr:q:",
+        while ((opt = getopt_long(argc, argv, "hvi:dr:q:m:t:",
                    long_options, &long_index )) != -1) {
                 switch (opt) {
                 case 'h':
                         help_print(argv[0]);
-                        exit(EXIT_FAILURE);
+                        exit(EXIT_SUCCESS);
+                case 'v':
+                        verbose = 1; 
                 case 'i':
                         dev = optarg;
                         break;
@@ -457,6 +480,12 @@ main(int argc, char* argv[])
                         dhcp_action = DHCP_OPTION_RELEASE;
                         inet_aton(optarg, &ip);
                         break;
+                case 'm':
+                        optmac = optarg;
+                        break;
+                case 't':
+                        timeout = (atoi(optarg));
+                        break;
                 default:
                         usage_print(argv[0]);
                         exit(EXIT_FAILURE);
@@ -468,13 +497,24 @@ main(int argc, char* argv[])
                 exit(EXIT_FAILURE);
         }
 
-        int sd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-        check(sd != -1, "socket() failed");
-
         uint8_t mac[ETHER_ADDR_LEN];
         ssize_t rc;
-        rc = get_mac_address(dev, mac);
-        check(rc != -1, "get_mac_address() failed");
+        if (!optmac){
+                rc = get_mac_address(dev, mac);
+                check(rc != -1, "get_mac_address() failed");
+        } else {
+                // dirty
+                int optmac_ok = sscanf(optmac, "%2x:%2x:%2x:%2x:%2x:%2x", mac, mac+1, mac+2, mac+3, mac+4, mac+5);
+                // check(optmac_ok != 6, "bad MAC address provided"); // does not work? missing something, time to sleep
+                // FIXME: better eror-handling
+                if ( optmac_ok != 6 ){
+                        printf("bad MAC address provided\n");
+                        exit(EXIT_FAILURE);
+                }
+        }
+
+        int sd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+        check(sd != -1, "socket() failed");
 
         struct packet pkt_local;
         packet_init(&pkt_local);
@@ -489,7 +529,7 @@ main(int argc, char* argv[])
         if (dhcp_action == DHCP_OPTION_RELEASE)
                 goto done;
 
-        rc = packet_recv(sd, &pkt_remote);
+        rc = packet_recv(sd, &pkt_remote, timeout);
         check(rc != -1, "packet_recv() failed");
 
         dhcp_print(pkt_remote.dhcp_header);

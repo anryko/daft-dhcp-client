@@ -16,13 +16,16 @@ make
 #### Usage
 ```bash
 $ ./daft-dhcp-client -h
-Usage: ./daft-dhcp-client -i <interface> [-d] [-r <ip>] [-q <ip>] [-h]
+Usage: ./daft-dhcp-client -i <interface> [-h] [-v] [-d] [-r <ip>] [-q <ip>] [-m <MAC>] [-t <sec>]
 
         -h --help                       This help message
+        -v --verbose                    Print debugging info to stderr
         -i --interface <interface>      Interface name
         -d --discover                   Discover DHCP Server
         -r --request <ip>               Request IP lease
         -q --release <ip>               Release IP lease
+        -m --mac <MAC>                  MAC address
+        -t --timeout <sec>              Timeout (default 5 sec.)
 
 $ sudo ./daft-dhcp-client -i eth0
 Your-IP 10.0.2.16

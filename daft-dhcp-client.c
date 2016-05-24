@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
@@ -26,9 +27,9 @@
                 errno = 0;                                                     \
                 goto error;                                                    \
         }
-#define log_debug(format, ...) do {                     \
-        if (verbose)                                    \
-                fprintf(stderr, format, ##__VA_ARGS__); \
+#define log_debug(format, ...) do {                                            \
+        if (verbose)                                                           \
+                fprintf(stderr, format, ##__VA_ARGS__);                        \
         } while(0)
 
 #define DHCP_CHADDR_LEN 16
@@ -76,7 +77,7 @@
 
 #define DHCP_MAGIC_COOKIE 0x63825363
 
-static int verbose = 0;
+static bool verbose = false;
 
 struct dhcphdr {
         uint8_t opcode;
@@ -382,7 +383,7 @@ dhcp_print(struct dhcphdr* dhcp)
                                (int)op_len, cur_pos);
                 } else if (code == DHCP_OPTION_BROADCAST_ADDRESS
                            && op_len == 4) {
-                         addr_print("Broadcast-Address", cur_pos, 1);
+                        addr_print("Broadcast-Address", cur_pos, 1);
                 } else if (code == DHCP_OPTION_SERVER_ID
                            && op_len == 4) {
                         addr_print("Server-ID", cur_pos, 1);
@@ -396,11 +397,11 @@ dhcp_print(struct dhcphdr* dhcp)
                                (int)op_len, cur_pos);
                 } else if (code == DHCP_OPTION_RENEWAL_TIME
                            && op_len == 4) {
-                         printf("Renewal-Time %d\n",
+                        printf("Renewal-Time %d\n",
                                htonl(*(uint32_t*)cur_pos));
                 } else if (code == DHCP_OPTION_REBINDING_TIME
                            && op_len == 4) {
-                         printf("Rebinding-Time %d\n",
+                        printf("Rebinding-Time %d\n",
                                htonl(*(uint32_t*)cur_pos));
                 } else {
                         log_debug("Undefined-code %d\n", code);
@@ -498,7 +499,7 @@ main(int argc, char* argv[])
                         help_print(argv[0]);
                         exit(EXIT_SUCCESS);
                 case 'v':
-                        verbose = 1; 
+                        verbose = true;
                         break;
                 case 'i':
                         dev = optarg;

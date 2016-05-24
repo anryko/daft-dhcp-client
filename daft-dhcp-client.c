@@ -107,7 +107,7 @@ struct packet {
 };
 
 static ssize_t
-get_mac_address(char* dev_name, uint8_t* mac)
+mac_get_from_dev(char* dev_name, uint8_t* mac)
 {
         struct ifreq ifr;
         int sd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
@@ -119,6 +119,17 @@ get_mac_address(char* dev_name, uint8_t* mac)
         check(rc == 0, "ioctl(SIOCGIFHWADDR) failed");
 
         memcpy(mac, ifr.ifr_addr.sa_data, ETHER_ADDR_LEN);
+        return 0;
+error:
+        return -1;
+}
+
+static ssize_t
+mac_get_from_str(char* string, uint8_t* mac)
+{
+        ssize_t mac_len = sscanf(string, "%2x:%2x:%2x:%2x:%2x:%2x", mac,
+                                 mac + 1, mac + 2, mac + 3, mac + 4, mac + 5);
+        check(mac_len == 6, "mac_get_from_str() failed");
         return 0;
 error:
         return -1;
@@ -523,14 +534,10 @@ main(int argc, char* argv[])
 
         uint8_t mac[ETHER_ADDR_LEN];
         ssize_t rc;
-        if (!optmac){
-                rc = get_mac_address(dev, mac);
-                check(rc != -1, "get_mac_address() failed");
-        } else {
-                // dirty
-                int optmac_ok = sscanf(optmac, "%2x:%2x:%2x:%2x:%2x:%2x", mac, mac+1, mac+2, mac+3, mac+4, mac+5);
-                check(optmac_ok == 6, "bad MAC address provided");
-        }
+        rc = (optmac)
+                ? mac_get_from_str(optmac, mac)
+                : mac_get_from_dev(dev, mac);
+        check(rc != -1, "bad MAC address");
 
         int sd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
         check(sd != -1, "socket() failed");

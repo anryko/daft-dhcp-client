@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <time.h>
 #include <getopt.h>
+#include <netinet/ether.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
@@ -329,14 +330,15 @@ dhcp_type_print(uint8_t* msg_type_code)
 static void
 dhcp_print(struct dhcphdr* dhcp)
 {
-        // dirty, should use ether_ntoa instead
-        printf ("Your-MAC %01x:%01x:%01x:%01x:%01x:%01x\n",
-                dhcp->chaddr[0], dhcp->chaddr[1], dhcp->chaddr[2],
-                dhcp->chaddr[3], dhcp->chaddr[4], dhcp->chaddr[5]);
+        if (dhcp->chaddr) {
+                struct ether_addr ether;
+                memcpy(ether.ether_addr_octet, dhcp->chaddr, ETHER_ADDR_LEN);
+                printf("Your-MAC %s\n", ether_ntoa(&ether));
+        }
 
-        struct in_addr ip;
-        ip.s_addr = dhcp->yiaddr;
-        if (ip.s_addr != 0) {
+        if (dhcp->yiaddr) {
+                struct in_addr ip;
+                ip.s_addr = dhcp->yiaddr;
                 printf("Your-IP %s\n", inet_ntoa(ip));
         }
 

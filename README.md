@@ -28,6 +28,7 @@ Usage: ./daft-dhcp-client -i <interface> [-h] [-v] [-d] [-r <ip>] [-q <ip>] [-m 
         -t --timeout <sec>              Timeout (default 5 sec.)
 
 $ sudo ./daft-dhcp-client -i eth0
+Your-MAC c0:28:96:11:f4:7a
 Your-IP 10.0.2.16
 Message-Type OFFER
 Subnet-Mask 255.255.255.0
@@ -36,6 +37,7 @@ Domain-Name-Servers 10.0.2.3
 Lease-Time 86400
 Server-ID 10.0.2.2
 $ sudo ./daft-dhcp-client -i eth0 -r 10.0.2.16
+Your-MAC c0:28:96:11:f4:7a
 Your-IP 10.0.2.16
 Message-Type ACK
 Subnet-Mask 255.255.255.0
